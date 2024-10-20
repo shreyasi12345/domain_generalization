@@ -28,9 +28,9 @@ if __name__ == "__main__":
         logdir='./log',
         # data
         domain='pacs',
-        src='Photos,Multispectral',
-        trg='APR',
-        datadir='./Dataset',
+        src='art,photo,cartoon',
+        trg='sketch',
+        datadir='./input',
         train_trans='train',
         test_trans='test',
         # model
@@ -280,12 +280,10 @@ if __name__ == "__main__":
 
             len_src = imgs_src[0][0].size(0) * len(imgs_src)
 
-            #imgs_src = [imgs.to(device) for imgs in imgs_src]
-            #lbls_src = [lbls.to(device) for lbls in lbls_src]
+            imgs_src = [imgs.to(device) for imgs in imgs_src]
+            lbls_src = [lbls.to(device) for lbls in lbls_src]
 
-            imgs_src = [torch.stack([img.to(device) for img in imgs]) for imgs in imgs_src]
-            lbls_src = [torch.stack([lbl.to(device) for lbl in lbls])for lbls in lbls_src]
-
+            
             with torch.set_grad_enabled(True):
                 recs_src = [mirror_net(imgs) for imgs in imgs_src]
                 advs_src = [anet(recs) for anet, recs in zip(F_nets, recs_src)]
