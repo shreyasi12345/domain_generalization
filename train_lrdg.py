@@ -280,17 +280,26 @@ if __name__ == "__main__":
 
             len_src = imgs_src[0][0].size(0) * len(imgs_src)
 
-            imgs_src = [imgs.to(device) for imgs in imgs_src]
-            lbls_src = [lbls.to(device) for lbls in lbls_src]
+            #imgs_src = [imgs.to(device) for imgs in imgs_src]
+            #lbls_src = [lbls.to(device) for lbls in lbls_src]
+
+            imgs_src = [[img.to(device) for img in batch] for batch in imgs_src]
+            lbls_src = [[lbl.to(device) for lbl in batch] for batch in lbls_src]
+
+
+            imgs_src_stacked = [torch.stack(batch) for batch in imgs_src]
+            lbls_src_stacked = [torch.stack(batch) for batch in lbls_src]
+
+           
 
             
             with torch.set_grad_enabled(True):
-                recs_src = [mirror_net(imgs) for imgs in imgs_src]
+                recs_src = [mirror_net(imgs) for imgs in imgs_src_stacked]
                 advs_src = [anet(recs) for anet, recs in zip(F_nets, recs_src)]
 
-                loss_mse = [mse_loss(recs, imgs) for recs, imgs in zip(recs_src, imgs_src)]
+                loss_mse = [mse_loss(recs, imgs) for recs, imgs in zip(recs_src, imgs_src_stacked)]
                 loss_enm = [enm_loss(advs, advs) for advs in advs_src]
-                loss_cla = [ce_loss(F_cla_net(recs), lbls) for recs, lbls in zip(recs_src, lbls_src)]
+                loss_cla = [ce_loss(F_cla_net(recs), lbls) for recs, lbls in zip(recs_src, lbls_src_stacked)]
 
                 loss_enm_sum = torch.sum(torch.stack(loss_enm))
                 loss_mse_sum = torch.sum(torch.stack(loss_mse))

@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import fourier_transform
 import random
+from torchvision.transforms.functional import to_pil_image
 
 from __main__ import args
 
@@ -111,9 +112,18 @@ class BaseDataset(Dataset):
         img_o = self.pre_transform_train(imgs)
         img_s, label_s = self.sample_image()
         img_s2o, img_o2s = fourier_transform.colorful_spectrum_mix(img_o, img_s, alpha=self.alpha)
-        img_o, img_s = self.post_transform_train(img_o), self.post_transform_train(img_s)
+
+
+        img_o = self.post_transform_train(ensure_pil_image(img_o))
+        img_s = self.post_transform_train(ensure_pil_image(img_s))
+        img_s2o = self.post_transform_train(ensure_pil_image(img_s2o))
+        img_o2s = self.post_transform_train(ensure_pil_image(img_o2s))
+
+
+
+        #img_o, img_s = self.post_transform_train(img_o), self.post_transform_train(img_s)
         
-        img_s2o, img_o2s = self.post_transform_train(img_s2o), self.post_transform_train(img_o2s)
+        #img_s2o, img_o2s = self.post_transform_train(img_s2o), self.post_transform_train(img_o2s)
         imgs = [img_o, img_s, img_s2o, img_o2s]
         lbls = [lbls, label_s, lbls, label_s]
         
@@ -137,6 +147,31 @@ def get_image_label(category_list, label_list, domain_path):
     lbl_list = np.array([x for e in lbl_list for x in e])
     return image_list, lbl_list
 
+#helper function
+def ensure_pil_image(img):
+    # Convert torch tensor to PIL Image if it's a tensor
+    if isinstance(img, torch.Tensor):
+        img = to_pil_image(img)
+    # Convert NumPy array to PIL Image
+    elif isinstance(img, np.ndarray):
+        # Check the shape of the image and handle accordingly
+        if img.ndim == 3:
+            # If it has 3 dimensions, check if it's already in (H, W, C) format
+            if img.shape[0] == 1 and img.shape[1] == 1:
+                # Reshape from (1, 1, 224) to a valid image format, e.g., grayscale
+                img = np.squeeze(img)  # Remove dimensions of size 1
+            elif img.shape[2] == 224:
+                # Handle the case where the shape might be incorrect for an image
+                # Assuming you want to convert it into a 224x224 grayscale image
+                img = img.reshape(224, 224)
+        elif img.ndim == 1:
+            # Handle flattened images (reshape to 2D if needed)
+            img = img.reshape(int(np.sqrt(img.size)), int(np.sqrt(img.size)))  # Reshape into a square image
+        
+        # Convert to PIL Image after reshaping
+        img = Image.fromarray(img)
+    
+    return img
 
 class PACS(object):
     """PACS train/val data
@@ -206,10 +241,10 @@ class PACS(object):
         image_val_sketch = data_path + '/' + val_images_sketch[0].values
         lbl_val_sketch = val_images_sketch[1].values - 1
 
-        dataset_train_art = BaseDataset(image_train_art, lbl_train_art, domain_dic['art'], data_transforms['train'],data_transforms['train'])
-        dataset_train_cartoon = BaseDataset(image_train_cartoon, lbl_train_cartoon, domain_dic['cartoon'], data_transforms['train'],data_transforms['train'])
-        dataset_train_photo = BaseDataset(image_train_photo, lbl_train_photo, domain_dic['photo'], data_transforms['train'],data_transforms['train'])
-        dataset_train_sketch = BaseDataset(image_train_sketch, lbl_train_sketch, domain_dic['sketch'], data_transforms['train'],data_transforms['train'])
+        dataset_train_art = BaseDataset(image_train_art, lbl_train_art, domain_dic['art'], data_transforms['pre-train'],data_transforms['post-train'])
+        dataset_train_cartoon = BaseDataset(image_train_cartoon, lbl_train_cartoon, domain_dic['cartoon'], data_transforms['pre-train'],data_transforms['post-train'])
+        dataset_train_photo = BaseDataset(image_train_photo, lbl_train_photo, domain_dic['photo'], data_transforms['pre-train'],data_transforms['post-train'])
+        dataset_train_sketch = BaseDataset(image_train_sketch, lbl_train_sketch, domain_dic['sketch'], data_transforms['pre-train'],data_transforms['post-train'])
 
         dataset_val_art = BaseDataset(image_val_art, lbl_val_art, domain_dic['art'],None,None, data_transforms['test'])
         dataset_val_cartoon = BaseDataset(image_val_cartoon, lbl_val_cartoon, domain_dic['cartoon'],None,None, data_transforms['test'])
